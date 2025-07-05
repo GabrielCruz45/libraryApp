@@ -1,25 +1,32 @@
-# This special file turns the app directory into a Python package. 
-# It contains the application factory function. 
-# This function is responsible for creating the Flask app instance, 
-# initializing extensions like SQLAlchemy, and 
-# registering our different sets of routes (Blueprints).
-
-
+import os
 
 from flask import Flask
-from sqlalchemy import create_engine, text
-
-app = Flask(__name__)
-app.secret_key = 'fdd3d8e6681c52408787e5a560261e061084d36d988786e016e6640ff9e73e18'
-
-## create database file, connect to execute methods?
-engine = create_engine('sqlite:///mydatabase.db', echo=True)
-conn = engine.connect()
-conn.execute(text("CREATE TABLE IF NOT EXISTS people (name str, age int)"))
-## to actually commit ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ SQL queries
-conn.commit()
 
 
-@app.route("/")
-def hello_world():
-    return "<p> Hello, world. <p>"
+def create_app(test_config=None):
+    # create and configure the app
+    app = Flask(__name__, instance_relative_config=True)
+    app.config.from_mapping(
+        SECRET_KEY='dev',
+        DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite'),
+    )
+
+    if test_config is None:
+        # load the instance config, if it exists, when not testing
+        app.config.from_pyfile('config.py', silent=True)
+    else:
+        # load the test config if passed in
+        app.config.from_mapping(test_config)
+
+    # ensure the instance folder exists
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass
+
+    # a simple page that says hello
+    @app.route('/hello')
+    def hello():
+        return 'Hello, World!'
+
+    return app
