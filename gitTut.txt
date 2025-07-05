@@ -1,3 +1,8 @@
+Command
+    What it does
+
+
+
 git clone [url] 
     Copies an existing repository from GitHub down to your computer.
 
@@ -19,3 +24,70 @@ git commit -m "message"         (This saves the snapshot to your local history w
 
 git push                        (This sends your saved commit up to the cloud.)
     Sends your saved commits from your computer up to your repository on GitHub.
+
+
+
+git status
+    Your project "dashboard." It tells you which branch you're on, which files you've changed, 
+    and which files are staged for the next commit.
+
+    You will use this constantly. Before you add, before you commit, 
+    you'll run git status to make sure everything looks right. It's your safety check.
+
+
+
+git pull
+    Fetches changes from the remote repository on GitHub and merges them into your local copy.
+    
+    This is crucial for collaboration. But even when working alone, you might work on your project on 
+    two different computers (e.g., a laptop and a desktop). 
+    git pull ensures your local copy is up-to-date before you start working.
+
+
+
+
+
+So, the perfect solo workflow is:
+    Start of session: git pull
+
+    End of session: git add .
+    git commit -m "message"
+    git push
+
+
+
+
+>>>Branching.<<<
+
+Think of your project's history as the trunk of a tree. The main branch is that stable, working trunk.
+
+When you want to work on something new—like a new feature, a bug fix, or an experiment 
+you don't want to risk destabilizing the main trunk. So, you create a branch. 
+A branch is essentially a copy of your project at a specific point in time, allowing you to work in a safe, 
+isolated environment.
+
+Once you're happy with the changes on your branch, you merge them back into the main trunk.
+
+
+
+
+
+
+
+git checkout -b <branch-name>
+	Creates a new branch and immediately switches you to it. This is the command you'll use constantly to start new work.
+
+
+
+git branch
+	Lists all the branches in your repository and shows you which one you're currently on.
+
+
+
+git checkout <branch-name>
+	Switches to an existing branch.
+
+
+
+git merge <branch-name>
+	Merges the changes from the specified branch into your current branch.
