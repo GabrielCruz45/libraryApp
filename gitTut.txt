@@ -1,0 +1,21 @@
+git clone [url] 
+    Copies an existing repository from GitHub down to your computer.
+
+
+
+git add [file]                  ("Prepare to save the changes in this file.")
+    Chooses which files you want to include in your next "snapshot" (commit).
+
+    git add data_cleaning.py visualization.ipynb    (multiple files)
+    git add notebooks/                              (entire folder)
+    git add .                                       (every new file and change)
+
+
+
+git commit -m "message"         (This saves the snapshot to your local history with a descriptive message.)
+    Takes the snapshot of your staged files. The message explains what you changed.
+
+
+
+git push                        (This sends your saved commit up to the cloud.)
+    Sends your saved commits from your computer up to your repository on GitHub.

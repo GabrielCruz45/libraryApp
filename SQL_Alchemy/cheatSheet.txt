@@ -1,0 +1,172 @@
+Of course. Here is a "cheat sheet" covering the high-yield functions and the standard workflow for the SQLAlchemy ORM.
+
+### SQLAlchemy ORM Cheat Sheet
+
+This guide covers the essential commands for connecting to a database, defining tables as Python objects (models), and performing basic Create, Read, Update, and Delete (CRUD) operations.
+
+-----
+
+### ⚙️ 1. Setup & Connection
+
+This is the initial boilerplate to connect to your database and prepare the ORM.
+
+  * **`create_engine()`**: Creates the connection to your database. The connection string changes depending on your database type.
+    ```python
+    from sqlalchemy import create_engine
+
+    # Examples
+    engine = create_engine("sqlite:///mydatabase.db") # SQLite file
+    # engine = create_engine("postgresql://user:password@host:port/dbname") # PostgreSQL
+    ```
+  * **`declarative_base()`**: Creates a base class that your model classes will inherit from.
+    ```python
+    from sqlalchemy.orm import declarative_base
+
+    Base = declarative_base()
+    ```
+  * **`Base.metadata.create_all()`**: Creates all tables defined in your models within the database. This is usually run once when your application starts.
+    ```python
+    # Creates tables if they don't already exist
+    Base.metadata.create_all(engine)
+    ```
+
+-----
+
+### 📝 2. Defining Models
+
+A model is a Python class that maps to a database table.
+
+  * **`class Model(Base):`**: Defines a table. It must inherit from your `Base`.
+
+  * **`__tablename__`**: A required attribute that sets the actual name of the table in the database.
+
+  * **`Column()`**: Defines a column in the table. Key arguments include:
+
+      * **Data Types**: `Integer`, `String`, `Float`, `Boolean`, `DateTime`.
+      * **`primary_key=True`**: Marks the column as the table's primary key.
+      * **`nullable=False`**: Makes the column required (cannot be empty).
+      * **`ForeignKey("table_name.column_name")`**: Links the column to a column in another table.
+
+    <!-- end list -->
+
+    ```python
+    from sqlalchemy import Column, Integer, String, ForeignKey
+
+    class User(Base):
+        __tablename__ = 'users' # The table name
+        
+        id = Column(Integer, primary_key=True)
+        name = Column(String, nullable=False)
+        email = Column(String)
+    ```
+
+-----
+
+### 🔄 3. The Session (CRUD Operations)
+
+The session is your workspace for all database transactions. You add, modify, and delete objects within a session and then "commit" the changes.
+
+  * **`sessionmaker()`**: Creates a factory that generates new `Session` objects.
+
+  * **`session.add()`**: Stages a **new** object to be inserted into the database.
+
+  * **`session.add_all()`**: Stages a list of **new** objects to be inserted.
+
+  * **Updating Objects**: To update, you first query for an object, then change its attributes directly. The session automatically tracks the change.
+
+  * **`session.delete()`**: Stages an object to be deleted from the database.
+
+  * **`session.commit()`**: Saves all staged changes (inserts, updates, deletes) to the database in a single transaction.
+
+  * **`session.rollback()`**: Discards all changes made since the last commit.
+
+    ```python
+    from sqlalchemy.orm import sessionmaker
+
+    # Create the session factory and a new session
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    # CREATE
+    new_user = User(name="John Doe", email="john.doe@example.com")
+    session.add(new_user)
+
+    # UPDATE (first, you need to get the object)
+    user_to_update = session.get(User, 1) # Get user with ID 1
+    if user_to_update:
+        user_to_update.email = "new.email@example.com"
+
+    # DELETE
+    user_to_delete = session.get(User, 2)
+    if user_to_delete:
+        session.delete(user_to_delete)
+
+    # FINALIZE
+    session.commit() # Saves all the above changes
+    session.close() # Good practice to close the session
+    ```
+
+-----
+
+### 🔗 4. Relationships
+
+These functions link your models together.
+
+  * **`relationship()`**: Defines the link between two models from the Python object perspective. It gives you direct access to related objects (e.g., `user.posts`).
+
+  * **`back_populates`**: The most common way to link two `relationship()` calls. It ensures that when one side of the relationship is updated, the other side is automatically updated too.
+
+    ```python
+    from sqlalchemy.orm import relationship
+
+    class User(Base):
+        __tablename__ = 'users'
+        id = Column(Integer, primary_key=True)
+        name = Column(String, nullable=False)
+        # This relationship links to the Post model
+        posts = relationship("Post", back_populates="author")
+
+    class Post(Base):
+        __tablename__ = 'posts'
+        id = Column(Integer, primary_key=True)
+        title = Column(String, nullable=False)
+        author_id = Column(Integer, ForeignKey('users.id'))
+        # This relationship links back to the User model
+        author = relationship("User", back_populates="posts")
+    ```
+
+-----
+
+### 🔍 5. Querying (Getting Data)
+
+These are the modern SQLAlchemy 2.0+ methods for fetching data.
+
+  * **`select()`**: The primary function for creating a query.
+
+  * **`.where()`**: The method for filtering results (like a SQL `WHERE` clause).
+
+  * **`session.execute()`**: Runs the query you've built.
+
+  * **Result Fetching**: After executing, you use one of these to get your data:
+
+      * **`.scalars().all()`**: Returns a list of all resulting objects.
+      * **`.scalars().first()`**: Returns the first object or `None` if no results.
+      * **`.scalar()`**: Returns a single value if the query returns exactly one row and one column.
+      * **`.all()`**: Returns a list of `Row` objects (like tuples).
+
+    <!-- end list -->
+
+    ```python
+    from sqlalchemy import select
+
+    # Get all users
+    all_users_stmt = select(User)
+    all_users = session.execute(all_users_stmt).scalars().all()
+
+    # Get one user by name (filtering)
+    user_stmt = select(User).where(User.name == "John Doe")
+    john = session.execute(user_stmt).scalars().first()
+
+    # Get a user by their primary key
+    user_by_id = session.get(User, 1) # The most direct way to get by PK
+    ```

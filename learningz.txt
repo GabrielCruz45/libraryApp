@@ -1,0 +1,3 @@
+What is a WSGI application?
+The Web Server Gateway Interface is a simple calling convention for web servers to forward 
+requests to web applications or frameworks written in the Python programming language. 
