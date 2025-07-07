@@ -1,0 +1,186 @@
+CS50’s Final Project
+
+Excellent choice! Combining the "Dean's Dilemma" and the "Freshman's Friend" gives our project a powerful dual purpose: it serves both the administration and the students with smart, data-driven features. The phased approach will ensure we build a strong foundation before adding these exciting layers.
+I love your request to be guided rather than just given the code. That's the best way to learn! Let's get started on the plan for Phase 1: The Core Engine. I'll describe what you need to build and point you to the concepts and tools you'll need to learn to do it yourself.
+
+
+## Phase 1 Plan: Routes & Logic
+
+Our goal here is to build a functioning, secure web application with the core features of a library. We'll organize our Flask application into logical parts. It's common practice to separate routes based on their function (e.g., authentication routes vs. main application routes).
+
+
+1. App Setup & Configuration (__init__.py or app.py)
+
+This is the heart of your application where everything is initialized.
+* Your Goal: Create the main Flask application object and configure it to work with your database.
+* What to do:
+    1. Initialize the Flask app.
+    2. Configure a SECRET_KEY. This is crucial for session management and keeping user logins secure.
+    3. Set up the database connection string (SQLALCHEMY_DATABASE_URI). This tells SQLAlchemy where to find your database file.
+    4. Initialize the SQLAlchemy object with your Flask app. This connects them.
+    5. Before running the app for the first time, you'll need a way to create the database tables based on your models.py file. You can do this in a Python shell by importing your db object and running db.create_all().
+
+
+2. User Authentication (auth.py)
+
+This part handles everything related to users logging in, signing up, and logging out.
+
+Registration Route (/register)
+
+* Your Goal: Allow a new student to create an account.
+* What to do:
+    1. Create an HTML form in a register.html template. It should ask for a username, email, password, and password confirmation. Let's also add a field for their major, which is key for our "Freshman's Friend" feature!
+    2. Create a Flask route that accepts both GET requests (to display the form) and POST requests (to process the submitted data).
+    3. In the POST logic, you'll need to:
+        * Get the data from the form.
+        * Crucially, do not store the password directly! You must hash it. Research the werkzeug.security library (which comes with Flask) and use the generate_password_hash function.
+        * Check if a user with that username or email already exists.
+        * If everything is valid, create a new User object (from your models.py), and save it to the database using db.session.add(new_user) and db.session.commit().
+        * Redirect the user to the login page.
+
+Login Route (/login)
+
+* Your Goal: Allow an existing user to log in and start a session.
+* What to do:
+    1. Create a simple login.html form (username and password).
+    2. Create the /login route, again for GET and POST requests.
+    3. In the POST logic:
+        * Query the database for the user by their username.
+        * If the user exists, use werkzeug.security.check_password_hash to compare the submitted password with the stored hash.
+        * If the password is correct, you need to store that user's ID in the session. Research Flask's session object. Storing session['user_id'] = user.id is the standard way to "log in" a user.
+        * Redirect the user to the homepage (the book catalog).
+
+
+3. Main App Features (main.py)
+
+These are the core library features.
+
+Homepage / Book Catalog (/)
+
+* Your Goal: Display all the books in the library.
+* What to do:
+    1. Create an index.html template.
+    2. In your / route, query the Book model to get all books: books = Book.query.all().
+    3. Pass this books variable to your index.html template.
+    4. In the template, use a Jinja2 for loop to iterate through the books and display each one's title and author. Make each book title a link to its detail page.
+
+Borrowing a Book (/borrow/<int:book_id>)
+
+* Your Goal: Let a logged-in user borrow an available book.
+* What to do:
+    1. This shouldn't be a page, but a route that handles a POST request. On your book detail page, you'll have a "Borrow" button inside a <form>.
+    2. The logic in this route is critical:
+        * First, check if a user is logged in (if user_id is in the session).
+        * Find the book they want to borrow using the book_id.
+        * Check if book.available_copies > 0.
+        * If it is, decrement book.available_copies by 1.
+        * Create a new BorrowingRecord linking this user_id and book_id.
+        * Commit these changes to the database.
+        * Redirect the user back to the book detail page with a success message (using Flask's flash messaging is great for this).
+The logic for returning a book will be very similar but in reverse: you'll increment available_copies and update the BorrowingRecord.
+This is a solid plan for your MVP! It covers all the essential backend logic and database interactions.
+How does this roadmap for Phase 1 feel to you? Are you ready to start thinking about the first route, like registration?
+
+
+Alright, let's dive into the registration route! This is one of the most important parts of any web application.
+Our goal is to create a secure way for a new student to sign up for an account. This involves creating the sign-up form and writing the backend logic to handle the form submission.
+
+
+## Building the Registration Route (/register)
+
+This functionality will be split between two files: the HTML template for the form and the Python route in app/auth.py that processes it.
+
+1. The Sign-Up Form (templates/register.html)
+
+First, you need the visual part. This is the HTML form the user will see.
+* Your Goal: Create a form that collects the necessary information from the new user.
+* What to do:
+    * Inside your templates folder, you might want to create a subfolder called auth to keep things organized. Create a register.html file inside it.
+    * This file should contain a standard HTML <form>.
+    * The <form> tag's method attribute must be set to POST.
+    * You'll need <input> fields for:
+        * Username (type="text")
+        * Email (type="email")
+        * Major (type="text")
+        * Password (type="password")
+        * Confirm Password (type="password")
+    * Crucially, give each <input> a unique name attribute (e.g., name="username"). This name is how Flask will access the data you submit.
+    * Finally, add a submit button: <button type="submit">Register</button>.
+
+2. The Backend Logic (app/auth.py)
+
+Now for the engine room. This Python code will receive the form data and create the new user.
+* Your Goal: Write a Flask route that validates the user's input, checks for duplicates, securely hashes the password, and saves the new user to the database.
+* What to do:
+    1. Define the Route: In app/auth.py, create a route that can handle both displaying the form and processing the data.
+        * You'll use the decorator @auth.route('/register', methods=['GET', 'POST']).
+    2. Handle the POST Request: Inside your route function, check if the request method is POST.
+        * if request.method == 'POST':
+    3. Get Form Data: Access the data from the form using Flask's request object.
+        * username = request.form.get('username')
+        * Do this for email, major, and password.
+    4. Validate Data: Before hitting the database, perform some checks.
+        * Are any of the fields empty?
+        * Do the two password fields match? If not, you should probably send an error message back to the user using Flask's flash() function.
+    5. Check for Existing Users: Query your database to make sure the username or email isn't already taken.
+        * user = User.query.filter_by(username=username).first()
+        * If user exists, it means the username is taken. Flash an error and show the registration form again.
+    6. Hash the Password: This is a critical security step. Never store plain text passwords.
+        * Import generate_password_hash from werkzeug.security.
+        * hash = generate_password_hash(password, method='pbkdf2:sha256')
+    7. Create and Save the User: If all your checks pass, it's time to create the user.
+        * new_user = User(username=username, email=email, major=major, hash=hash)
+        * Add this new user to the database session: db.session.add(new_user)
+        * Commit the transaction to save it permanently: db.session.commit()
+    8. Redirect: After successfully registering, send the user to the login page so they can sign in.
+        * flash('Account created successfully! Please log in.')
+        * return redirect(url_for('auth.login'))
+    9. Handle the GET Request: If the request method is not POST, it must be GET. In this case, you just need to display the form.
+        * The line for this will be return render_template('auth/register.html').
+That's the complete blueprint for the registration functionality!
+Does this step-by-step guide make sense? Once you've got this planned out, we can move on to the login route.Let's do it! Next up is the login route. This is the partner to your registration route and allows existing users to access their accounts.
+
+
+## Building the Login Route (/login)
+
+The goal here is to verify a user's credentials and create a session for them, effectively "logging them in" so our app remembers who they are as they navigate to different pages.
+
+1. The Login Form (templates/auth/login.html)
+
+This is the simple form your users will see.
+* Your Goal: Create a form to collect the user's username and password.
+* What to do:
+    * Create a login.html file in your templates/auth/ folder.
+    * The <form> tag's method attribute must be set to POST.
+    * You'll need <input> fields for:
+        * Username (type="text", name="username")
+        * Password (type="password", name="password")
+    * Add a submit button: <button type="submit">Log In</button>.
+
+
+2. The Backend Logic (app/auth.py)
+
+This is where you'll check the user's submitted password against the secure hash you stored in the database.
+* Your Goal: Write a Flask route that finds the user, securely verifies their password, and starts a browser session.
+* What to do:
+    1. Define the Route: In app/auth.py, create the route @auth.route('/login', methods=['GET', 'POST']).
+    2. Handle the POST Request: Inside your route function, check for the POST method.
+    3. Get Form Data: Get the username and password from request.form.
+    4. Find the User: Query the database to see if a user with that username exists.
+        * user = User.query.filter_by(username=username).first()
+    5. Verify Credentials: This is the key security check. You must check two things:
+        * First, that a user was actually found.
+        * Second, that the password is correct. Use the function you'll import from werkzeug.security: check_password_hash(user.hash, password).
+        * Your if statement will look something like: if user and check_password_hash(user.hash, password):
+    6. Start the Session: If the credentials are correct, you "log the user in" by storing their ID in Flask's session object.
+        * session.clear() (It's good practice to clear any old session data first).
+        * session['user_id'] = user.id
+        * Now you can redirect them to the main catalog page: return redirect(url_for('main.index'))
+    7. Handle Failed Login: If the user doesn't exist or the password check fails, you should provide feedback.
+        * flash('Invalid username or password.')
+        * Then, re-render the login form.
+    8. Handle the GET Request: If the method is GET, just show the login page.
+        * return render_template('auth/login.html')
+That's the complete plan for logging users in securely. Once this and the registration are done, you have a complete authentication system.
+Ready to plan out the main application routes, like the book catalog?
+
